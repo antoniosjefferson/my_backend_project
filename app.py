@@ -25,5 +25,27 @@ def add_task():
     tasks.append(new_task_entry)  # Add the new task to the list
     return jsonify(new_task_entry), 201  # Return the newly created task
 
+# PUT route to update an existing task
+@app.route("/tasks/<int:task_id>", methods=["PUT"])
+def update_task(task_id):
+    task = next((task for task in tasks if task["id"] == task_id), None)  # Find the task by ID
+    if not task:
+        return jsonify({"error": "Task not found"}), 404  # Return error if task not found
+
+    updated_data = request.get_json()  # Get the JSON data from the request body
+    if "title" in updated_data:
+        task["title"] = updated_data["title"]  # Update the task's title if provided
+    return jsonify(task), 200  # Return the updated task
+
+# DELETE route to delete a task
+@app.route("/tasks/<int:task_id>", methods=["DELETE"])
+def delete_task(task_id):
+    task = next((task for task in tasks if task["id"] == task_id), None)  # Find the task by ID
+    if not task:
+        return jsonify({"error": "Task not found"}), 404  # Return error if task not found
+
+    tasks.remove(task)  # Remove the task from the list
+    return '', 204  # Return a 204 status (No Content) to indicate successful deletion
+
 if __name__ == "__main__":
     app.run(debug=True)
