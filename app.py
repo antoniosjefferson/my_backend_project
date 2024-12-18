@@ -27,6 +27,12 @@ def home():
     # Check if the server is running
     return "Task Manager API is running!"
 
+# Route to get all tasks
+@app.route("/tasks", methods=["GET"])
+def get_tasks():
+    # Return the list of all tasks
+    return jsonify(tasks)
+
 @app.route("/tasks/<int:task_id>", methods=["GET"])
 def get_task_by_id(task_id):
     # Retrieve a task by its ID or return an error if not found
