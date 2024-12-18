@@ -57,18 +57,31 @@ def add_task():
 
 @app.route("/tasks/<int:task_id>", methods=["PUT"])
 def update_task(task_id):
-    # Update a task's title by ID and save changes to the JSON file
+    # Find the task by ID in the task list
     task = next((task for task in tasks if task["id"] == task_id), None)
+    
     if not task:
+        # If the task is not found, return a 404 error
         return jsonify({"error": "Task not found"}), 404
 
+    # Get the data from the PUT request body
     updated_data = request.get_json()
+
+    # Check if the title or completed status is in the request data and update accordingly
     if "title" in updated_data:
         task["title"] = updated_data["title"]
-    else:
-        return jsonify({"error": "Title is required for update"}), 400
     
+    if "completed" in updated_data:
+        task["completed"] = updated_data["completed"]
+
+    # If neither title nor completed are provided, return a 400 error
+    if not ("title" in updated_data or "completed" in updated_data):
+        return jsonify({"error": "Either title or completed status must be provided to update the task"}), 400
+
+    # Save the updated tasks list to the JSON file
     save_tasks_to_file()
+
+    # Return the updated task
     return jsonify(task), 200
 
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
