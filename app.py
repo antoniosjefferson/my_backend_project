@@ -27,11 +27,29 @@ def home():
     # Check if the server is running
     return "Task Manager API is running!"
 
-# Route to get all tasks
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
-    # Return the list of all tasks
-    return jsonify(tasks)
+    # Return all tasks if no query parameters are provided
+    title_query = request.args.get("title")  # Get the 'title' query parameter
+    completed_query = request.args.get("completed")  # Get the 'completed' query parameter
+    
+    filtered_tasks = tasks  # Start with all tasks
+    
+    # Filter by title if 'title' query parameter is present
+    if title_query:
+        filtered_tasks = [task for task in filtered_tasks if title_query.lower() in task["title"].lower()]
+    
+    # Filter by completed if 'completed' query parameter is present
+    if completed_query is not None:
+        if completed_query.lower() == "true":
+            filtered_tasks = [task for task in filtered_tasks if task.get("completed") == True]
+        elif completed_query.lower() == "false":
+            filtered_tasks = [task for task in filtered_tasks if task.get("completed") == False]
+        else:
+            return jsonify({"error": "Invalid value for 'completed'. Use 'true' or 'false'."}), 400
+
+    # Return the filtered tasks
+    return jsonify(filtered_tasks)
 
 @app.route("/tasks/<int:task_id>", methods=["GET"])
 def get_task_by_id(task_id):
@@ -102,3 +120,4 @@ def mark_task_completed(task_id):
 
 if __name__ == "__main__":
     app.run(debug=True)
+    
