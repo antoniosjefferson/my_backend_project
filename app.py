@@ -6,6 +6,15 @@ app = Flask(__name__)
 # Define the file for storing tasks and functions for saving/loading tasks
 TASKS_FILE = "tasks.json"
 
+# Define a reusable function to format error responses
+def error_response(message, status):
+    # Create a JSON response containing the error message
+    response = jsonify({"error": message})
+    # Attach the HTTP status code to the response
+    response.status_code = status
+    # Return the formatted response
+    return response
+
 # Load tasks from the JSON file or return an empty list if the file doesn't exist
 def load_tasks_from_file():
     try:
@@ -29,26 +38,19 @@ def home():
 
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
-    # Return all tasks if no query parameters are provided
-    title_query = request.args.get("title")  # Get the 'title' query parameter
-    completed_query = request.args.get("completed")  # Get the 'completed' query parameter
+    # Return filtered tasks based on query parameters or all tasks if none provided
+    filtered_tasks = tasks
+    title = request.args.get("title")
+    completed = request.args.get("completed")
     
-    filtered_tasks = tasks  # Start with all tasks
+    if title:
+        filtered_tasks = [task for task in filtered_tasks if title.lower() in task["title"].lower()]
+    if completed:
+        if completed.lower() not in ["true", "false"]:
+            return error_response("Invalid value for 'completed'. Use 'true' or 'false'.", 400)
+        is_completed = completed.lower() == "true"
+        filtered_tasks = [task for task in filtered_tasks if task.get("completed") == is_completed]
     
-    # Filter by title if 'title' query parameter is present
-    if title_query:
-        filtered_tasks = [task for task in filtered_tasks if title_query.lower() in task["title"].lower()]
-    
-    # Filter by completed if 'completed' query parameter is present
-    if completed_query is not None:
-        if completed_query.lower() == "true":
-            filtered_tasks = [task for task in filtered_tasks if task.get("completed") == True]
-        elif completed_query.lower() == "false":
-            filtered_tasks = [task for task in filtered_tasks if task.get("completed") == False]
-        else:
-            return jsonify({"error": "Invalid value for 'completed'. Use 'true' or 'false'."}), 400
-
-    # Return the filtered tasks
     return jsonify(filtered_tasks)
 
 @app.route("/tasks/<int:task_id>", methods=["GET"])
@@ -56,7 +58,7 @@ def get_task_by_id(task_id):
     # Retrieve a task by its ID or return an error if not found
     task = next((task for task in tasks if task["id"] == task_id), None)
     if not task:
-        return jsonify({"error": "Task not found"}), 404
+        return error_response("Task not found", 404)
     return jsonify(task)
 
 @app.route("/tasks", methods=["POST"])
@@ -64,10 +66,14 @@ def add_task():
     # Add a new task to the list and save it to the JSON file
     new_task = request.get_json()
     if not new_task or "title" not in new_task:
-        return jsonify({"error": "Title is required"}), 400
+        return error_response("Title is required", 400)
     
     new_task_id = max([task["id"] for task in tasks]) + 1 if tasks else 1
-    new_task_entry = {"id": new_task_id, "title": new_task["title"], "completed": False}  # Default completed is False
+    new_task_entry = {
+        "id": new_task_id,
+        "title": new_task["title"],
+        "completed": False  # Default completed status
+    }
     
     tasks.append(new_task_entry)
     save_tasks_to_file()
@@ -75,16 +81,16 @@ def add_task():
 
 @app.route("/tasks/<int:task_id>", methods=["PUT"])
 def update_task(task_id):
-    # Update a task's title by ID and save changes to the JSON file
+    # Update a task's title or completion status by ID and save changes to the JSON file
     task = next((task for task in tasks if task["id"] == task_id), None)
     if not task:
-        return jsonify({"error": "Task not found"}), 404
+        return error_response("Task not found", 404)
 
     updated_data = request.get_json()
     if "title" in updated_data:
         task["title"] = updated_data["title"]
-    else:
-        return jsonify({"error": "Title is required for update"}), 400
+    if "completed" in updated_data:
+        task["completed"] = updated_data["completed"]
     
     save_tasks_to_file()
     return jsonify(task), 200
@@ -97,27 +103,5 @@ def delete_task(task_id):
     save_tasks_to_file()
     return jsonify({"message": "Task deleted"}), 200
 
-# **New Route: PATCH for Marking Task as Completed**
-@app.route("/tasks/<int:task_id>/complete", methods=["PATCH"])
-def mark_task_completed(task_id):
-    # Retrieve the task by ID
-    task = next((task for task in tasks if task["id"] == task_id), None)
-    if not task:
-        return jsonify({"error": "Task not found"}), 404
-
-    # Check if 'completed' field is in the request and update the task's status
-    updated_data = request.get_json()
-    if "completed" not in updated_data:
-        return jsonify({"error": "'completed' status is required"}), 400
-
-    # Update the task's "completed" status
-    task["completed"] = updated_data["completed"]
-
-    # Save updated tasks list to file
-    save_tasks_to_file()
-    
-    return jsonify(task), 200
-
 if __name__ == "__main__":
     app.run(debug=True)
-    
