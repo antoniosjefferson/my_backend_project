@@ -97,10 +97,20 @@ def update_task(task_id):
 
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
 def delete_task(task_id):
-    # Delete a task by ID and save changes to the JSON file
-    global tasks
+    # Search for the task by ID
+    task = next((task for task in tasks if task["id"] == task_id), None)
+
+    # Return an error response if the task is not found
+    if not task:
+        return error_response("Task not found", 404)
+
+    # Remove the task if found
     tasks = [task for task in tasks if task["id"] != task_id]
+
+    # Save updated tasks to the file
     save_tasks_to_file()
+
+    # Return success message with 200 status code
     return jsonify({"message": "Task deleted"}), 200
 
 if __name__ == "__main__":
