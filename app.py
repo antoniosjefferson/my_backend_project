@@ -95,6 +95,34 @@ def update_task(task_id):
     save_tasks_to_file()
     return jsonify(task), 200
 
+@app.route("/tasks/<int:task_id>", methods=["PATCH"])
+def update_task_status(task_id):
+    # Find the task by its ID
+    task = next((task for task in tasks if task["id"] == task_id), None)
+    if not task:
+        # Return an error response if the task is not found
+        return error_response("Task not found", 404)
+
+    # Get the request payload and validate it
+    updated_data = request.get_json()
+    if not updated_data or "completed" not in updated_data:
+        # Return an error response if the "completed" field is missing or invalid
+        return error_response("Field 'completed' is required and must be a boolean", 400)
+    
+    # Ensure the value for "completed" is a boolean
+    if not isinstance(updated_data["completed"], bool):
+        # Return an error response if "completed" is not a boolean
+        return error_response("Field 'completed' must be true or false", 400)
+
+    # Update the "completed" status of the task
+    task["completed"] = updated_data["completed"]
+
+    # Save the updated tasks to the JSON file
+    save_tasks_to_file()
+
+    # Return the updated task as a response
+    return jsonify(task), 200
+
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
 def delete_task(task_id):
     # Search for the task by ID
