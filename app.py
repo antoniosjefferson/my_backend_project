@@ -42,16 +42,37 @@ def get_tasks():
     filtered_tasks = tasks
     title = request.args.get("title")
     completed = request.args.get("completed")
-    
+
+    # Filter tasks by title if provided
     if title:
         filtered_tasks = [task for task in filtered_tasks if title.lower() in task["title"].lower()]
+    
+    # Filter tasks by completion status if provided
     if completed:
         if completed.lower() not in ["true", "false"]:
+            # Return an error if "completed" is not "true" or "false"
             return error_response("Invalid value for 'completed'. Use 'true' or 'false'.", 400)
         is_completed = completed.lower() == "true"
         filtered_tasks = [task for task in filtered_tasks if task.get("completed") == is_completed]
     
-    return jsonify(filtered_tasks)
+    # Pagination logic
+    page = request.args.get("page", default=1, type=int)  # Get the 'page' query parameter or default to 1
+    limit = request.args.get("limit", default=len(filtered_tasks), type=int)  # Get 'limit' or default to all tasks
+
+    # Validate 'page' and 'limit' as positive integers
+    if page < 1 or limit < 1:
+        # Return an error response if 'page' or 'limit' is invalid
+        return error_response("Page and limit must be positive integers.", 400)
+
+    # Calculate the start and end indices for slicing the tasks list
+    start = (page - 1) * limit
+    end = start + limit
+
+    # Slice the filtered tasks for pagination
+    filtered_tasks = filtered_tasks[start:end]
+
+    # Return the filtered and paginated tasks with a 200 status
+    return jsonify(filtered_tasks), 200
 
 @app.route("/tasks/<int:task_id>", methods=["GET"])
 def get_task_by_id(task_id):
