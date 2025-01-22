@@ -85,27 +85,21 @@ def get_task_by_id(task_id):
 @app.route("/tasks", methods=["POST"])
 def add_task():
     # Add a new task to the list and save it to the JSON file
-    try:
-        new_task = request.get_json()  # Parse JSON request body
-    except Exception:
-        return error_response("Invalid JSON format", 400)  # Error if body is not JSON
-    
-    # Check if 'title' exists and is a non-empty string
+    new_task = request.get_json()
     if not new_task or "title" not in new_task:
         return error_response("Title is required", 400)
     if not isinstance(new_task["title"], str) or not new_task["title"].strip():
         return error_response("Title must be a non-empty string", 400)
     
-    # Assign a new ID and add the task to the list
     new_task_id = max([task["id"] for task in tasks]) + 1 if tasks else 1
     new_task_entry = {
         "id": new_task_id,
-        "title": new_task["title"].strip(),  # Strip extra spaces
+        "title": new_task["title"],
         "completed": False  # Default completed status
     }
     
     tasks.append(new_task_entry)
-    save_tasks_to_file()  # Save to file
+    save_tasks_to_file()
     return jsonify(new_task_entry), 201
 
 @app.route("/tasks/<int:task_id>", methods=["PUT"])
@@ -116,14 +110,21 @@ def update_task(task_id):
         return error_response("Task not found", 404)
 
     updated_data = request.get_json()
-    if "title" in updated_data:
-        task["title"] = updated_data["title"]
-    if "completed" in updated_data:
-        task["completed"] = updated_data["completed"]
     
+    # Validate 'title' if provided
+    if "title" in updated_data:
+        if not isinstance(updated_data["title"], str) or not updated_data["title"].strip():
+            return error_response("Title must be a non-empty string", 400)
+        task["title"] = updated_data["title"]
+
+    # Validate 'completed' if provided
+    if "completed" in updated_data:
+        if not isinstance(updated_data["completed"], bool):
+            return error_response("Completed must be a boolean", 400)
+        task["completed"] = updated_data["completed"]
+
     save_tasks_to_file()
     return jsonify(task), 200
-
 
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
 def delete_task(task_id):
