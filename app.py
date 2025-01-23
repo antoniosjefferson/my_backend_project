@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, request
 import json  # Module for handling JSON file operations
+import re  # Import the regular expression module at the top of the file
 
 app = Flask(__name__)
 
@@ -84,22 +85,34 @@ def get_task_by_id(task_id):
 
 @app.route("/tasks", methods=["POST"])
 def add_task():
-    # Add a new task to the list and save it to the JSON file
+    # Parse the incoming request to get the task data
     new_task = request.get_json()
+
+    # Validate the "title" field
     if not new_task or "title" not in new_task:
-        return error_response("Title is required", 400)
+        return error_response("Title is required.", 400)
     if not isinstance(new_task["title"], str) or not new_task["title"].strip():
-        return error_response("Title must be a non-empty string", 400)
-    
+        return error_response("Title must be a non-empty string.", 400)
+    if len(new_task["title"]) > 100:
+        return error_response("Title must be 100 characters or fewer.", 400)
+    if re.search(r"[<>/]", new_task["title"]):
+        return error_response("Title contains prohibited characters.", 400)
+
+    # Assign a new unique ID to the task
     new_task_id = max([task["id"] for task in tasks]) + 1 if tasks else 1
+
+    # Create a new task entry
     new_task_entry = {
         "id": new_task_id,
         "title": new_task["title"],
-        "completed": False  # Default completed status
+        "completed": False  # Default completed status is False
     }
-    
+
+    # Append the new task to the tasks list and save to file
     tasks.append(new_task_entry)
     save_tasks_to_file()
+
+    # Return the newly created task with a 201 status
     return jsonify(new_task_entry), 201
 
 @app.route("/tasks/<int:task_id>", methods=["PUT"])
