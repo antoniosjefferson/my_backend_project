@@ -1,13 +1,15 @@
+import secrets
 from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
-import json
-import re
 
 app = Flask(__name__)
 
-# Secret key for JWT encryption
-app.config["JWT_SECRET_KEY"] = "your_secret_key"
+# Generate a random 256-bit key (32 bytes) and set it as the JWT secret key
+app.config["JWT_SECRET_KEY"] = secrets.token_hex(32)  # Secure and random key generation
+
 jwt = JWTManager(app)
+
+# Your other routes and logic here...
 
 # Define the file for storing tasks and functions for saving/loading tasks
 TASKS_FILE = "tasks.json"
