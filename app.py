@@ -115,39 +115,47 @@ def add_task():
     # Return the newly created task with a 201 status
     return jsonify(new_task_entry), 201
 
-@app.route("/tasks/<int:task_id>", methods=["PUT"])
+@app.route('/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
-    # Check if the task exists by ID
+    # Check if the task exists
     task = next((task for task in tasks if task["id"] == task_id), None)
     if not task:
-        # Return an error if task not found
         return error_response("Task not found", 404)
 
-    # Validate that the request payload is provided and is in JSON format
-    updated_data = request.get_json()
-    if not updated_data:
+    # Parse the JSON payload
+    try:
+        updates = request.get_json()
+    except Exception:
+        return error_response("Invalid JSON payload", 400)
+
+    # Validate if the request body exists
+    if not updates:
         return error_response("Request payload is required", 400)
 
-    # Validate the 'title' field if provided in the payload
-    if "title" in updated_data:
-        if not isinstance(updated_data["title"], str) or not updated_data["title"].strip():
+    # Define allowed fields
+    allowed_fields = {"title", "completed"}
+    
+    # Check for unexpected fields
+    unexpected_fields = set(updates.keys()) - allowed_fields
+    if unexpected_fields:
+        return error_response(f"Unexpected fields: {', '.join(unexpected_fields)}", 400)
+
+    # Validate title field
+    if "title" in updates:
+        if not isinstance(updates["title"], str) or not updates["title"].strip():
             return error_response("Title must be a non-empty string", 400)
 
-    # Validate the 'completed' field if provided in the payload
-    if "completed" in updated_data:
-        if not isinstance(updated_data["completed"], bool):
+    # Validate completed field
+    if "completed" in updates:
+        if not isinstance(updates["completed"], bool):
             return error_response("Completed field must be true or false", 400)
 
-    # Update the task with valid fields from the payload
-    if "title" in updated_data:
-        task["title"] = updated_data["title"].strip()  # Ensure title has no extra spaces
-    if "completed" in updated_data:
-        task["completed"] = updated_data["completed"]
+    # Update the task
+    task.update({key: value for key, value in updates.items() if key in allowed_fields})
 
-    # Save the updated tasks to the file
+    # Save to file
     save_tasks_to_file()
 
-    # Return the updated task with a success status
     return jsonify(task), 200
 
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
