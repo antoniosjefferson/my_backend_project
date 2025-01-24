@@ -1,13 +1,16 @@
+import os
 import secrets
 from flask import Flask, jsonify, request
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 
 app = Flask(__name__)
 
-# Generate a random 256-bit key (32 bytes) and set it as the JWT secret key
-app.config["JWT_SECRET_KEY"] = secrets.token_hex(32)  # Secure and random key generation
+# Use the secret key from an environment variable, or generate one if not set
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", secrets.token_hex(32))
 
 jwt = JWTManager(app)
+
+# Your routes and logic here...
 
 # Your other routes and logic here...
 
